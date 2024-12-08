@@ -3,11 +3,13 @@ import pandas as pd
 import random
 import openai
 import os
+from dotenv import load_dotenv
 
 # -------------------------------
-# 설정: OpenAI API Key
+# .env 파일 로드 (API Key 숨김)
 # -------------------------------
-openai.api_key = "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"
+load_dotenv()  # .env 파일의 환경변수 로드
+openai.api_key = os.getenv("OPENAI_API_KEY")  # .env에 OPENAI_API_KEY가 있어야 함.
 
 # -------------------------------
 # 챗봇 이름 및 브랜딩
@@ -43,7 +45,6 @@ st.markdown(
         margin-bottom: 30px;
         text-align: center;
         padding-top: 30px;
-        position: relative;
     }
     .title-container h1 {
         margin-bottom: 10px;
@@ -55,51 +56,43 @@ st.markdown(
         font-size: 1.1em;
         color: #555;
     }
-    /* 제작자 이름 스타일 */
-    .creator {
-        position: absolute;
-        top: 10px;
-        right: 20px;
-        font-size: 0.9em;
-        color: #555;
-    }
-
     .chat-container {
-        margin-top: 20px; 
-        display: flex; 
-        flex-direction: column; 
-        gap: 20px;
+        margin-top: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 30px; /* 메시지 사이 간격 늘림 */
     }
     .user-message, .bot-message {
-        display: flex; 
+        display: flex;
         align-items: center;
+        margin-bottom: 10px; /* 각 메시지 하단에도 추가 여백 */
     }
     .user-message {
-        justify-content: flex-end; 
+        justify-content: flex-end;
     }
     .bot-message {
         justify-content: flex-start;
     }
     .message-bubble {
-        padding: 12px 18px; 
-        border-radius: 20px; 
-        font-size: 1em; 
-        max-width: 70%; 
+        padding: 12px 18px;
+        border-radius: 20px;
+        font-size: 1em;
+        max-width: 70%;
         line-height: 1.5;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     .user-bubble {
-        background: #d4f1c5; 
-        color: #333; 
+        background: #d4f1c5;
+        color: #333;
     }
     .bot-bubble {
-        background: #ffffff; 
+        background: #ffffff;
         color: #333;
     }
     .recommendation {
-        background-color: #FFF9E6; 
-        padding: 10px; 
-        border-radius: 10px; 
+        background-color: #FFF9E6;
+        padding: 10px;
+        border-radius: 10px;
         margin: 10px 0;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         font-size: 0.95em;
@@ -115,7 +108,7 @@ st.markdown(
         color: #333;
         margin-top: 20px;
     }
-    [data-testid="stSidebar"] .stSelectbox, 
+    [data-testid="stSidebar"] .stSelectbox,
     [data-testid="stSidebar"] .stButton {
         margin-top: 10px;
     }
@@ -132,7 +125,6 @@ st.markdown(
     <div class="title-container">
         <h1>성실당 챗봇 서비스</h1>
         <p>여기는 여러분을 도와줄 <strong>{CHATBOT_NAME}</strong>의 공간입니다!</p>
-        <div class="creator">제작: 박준규</div>
     </div>
     """,
     unsafe_allow_html=True
@@ -167,7 +159,7 @@ def load_data():
         [
             tourism_data[['카테고리', '이름', '주소', '거리(km)', '이동시간_분_차', '이동시간_분_보행']],
             small_business_data[['카테고리', '이름', '주소', '거리(km)', '이동시간_분_차', '이동시간_분_보행']]
-        ], 
+        ],
         ignore_index=True
     )
     return combined_data
@@ -191,7 +183,7 @@ def recommend_places(category, time_limit):
     try:
         distance_limit = {"10분": 1, "20분": 2, "30분": 3, "1시간 이내": 5}[time_limit]
         filtered_data = combined_data[
-            (combined_data['카테고리'] == category) & 
+            (combined_data['카테고리'] == category) &
             (combined_data['거리(km)'] <= distance_limit)
         ]
         if not filtered_data.empty:
@@ -202,8 +194,6 @@ def recommend_places(category, time_limit):
     except Exception as e:
         st.error(f"추천 중 오류 발생: {e}")
         return None
-
-import openai
 
 # -------------------------------
 # 사용자 메시지 처리
@@ -251,7 +241,7 @@ def search_place_info(place_name):
     completion = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": f"당신은 대전 중구 지역경제 활성화 서비스 챗봇 {CHATBOT_NAME}입니다. 질문에 반드시 대전 중구와 관련된 정보만 제공하세요."},
+            {"role": "system", "content": "당신은 대전 중구 지역경제 활성화 서비스 챗봇입니다. 질문에 반드시 대전 중구와 관련된 정보만 제공하세요."},
             {"role": "user", "content": info_text}
         ],
         max_tokens=2000,
@@ -268,12 +258,12 @@ with chat_container:
     for speaker, message in st.session_state.chat_history:
         if speaker == "User":
             st.markdown(
-                f"<div class='user-message'><div class='message-bubble user-bubble'>{message}</div></div>", 
+                f"<div class='user-message'><div class='message-bubble user-bubble'>{message}</div></div>",
                 unsafe_allow_html=True
             )
         else:
             st.markdown(
-                f"<div class='bot-message'><div class='message-bubble bot-bubble'>{message}</div></div>", 
+                f"<div class='bot-message'><div class='message-bubble bot-bubble'>{message}</div></div>",
                 unsafe_allow_html=True
             )
 
@@ -324,4 +314,3 @@ if st.session_state.recommendations:
 # 채팅 입력 UI
 # -------------------------------
 st.text_input("메시지를 입력하세요:", key="user_message", on_change=handle_user_message)
-
