@@ -1,28 +1,15 @@
 import streamlit as st
 import pandas as pd
+import random
 import openai
+import os
 
 # -------------------------------
-# Streamlit 기본 설정
+# 설정: OpenAI API Key
 # -------------------------------
-st.set_page_config(
-    layout="wide",
-    page_title="성실당 챗봇",
-    page_icon="🍞"
-)
-
-# -------------------------------
-# OpenAI API 키 설정
-# -------------------------------
-st.sidebar.header("API 설정")
-api_key_input = st.sidebar.text_input(
-    "OpenAI API Key 입력", 
-    type="password", 
-    key="api_key_input"
-)
-
-if api_key_input:
-    openai.api_key = api_key_input
+# 실제로는 환경변수나 st.secrets를 사용할 것을 권장
+# 여기서는 코드 내에 키를 입력하지 않고, 사용자가 직접 입력하게 함
+# 기존 코드 변경: api_key 입력 부분 주석 처리 후 사용자 입력받도록 변경
 
 # -------------------------------
 # 챗봇 이름 및 브랜딩
@@ -33,6 +20,15 @@ WELCOME_MESSAGE = (
     "관광 명소, 소상공인 정보, 장소 추천 등 궁금한 점이 있다면 편하게 질문해주세요! "
     "좌측 상단 추천 필터의 카테고리와 여유 시간을 선택하여 추천을 받을 수 있습니다.\n\n"
     "주의: 이 챗봇은 오직 **대전 중구 관련 정보**만 제공합니다."
+)
+
+# -------------------------------
+# Streamlit 기본 설정
+# -------------------------------
+st.set_page_config(
+    layout="wide",
+    page_title="성실당 챗봇",
+    page_icon="🍞"
 )
 
 # -------------------------------
@@ -204,19 +200,34 @@ def recommend_places(category, time_limit):
 # -------------------------------
 def handle_user_question(user_message):
     try:
+        # "대전", "중구" 키워드 체크
         if ("대전" not in user_message) and ("중구" not in user_message):
             return "이 서비스는 대전 중구 관련 정보만 제공합니다. 대전 중구와 관련된 질문을 해주세요."
 
-        completion = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": f"당신은 대전 중구 지역경제 활성화 서비스 챗봇 {CHATBOT_NAME}입니다."},
-                {"role": "user", "content": user_message}
-            ],
-            max_tokens=2000,
-            temperature=0.7
-        )
-        response = completion['choices'][0]['message']['content'].strip()
+        # 간단한 키워드 응대
+        if "추천 이유" in user_message:
+            response = "추천 이유는 대전 중구 내 가까운 거리와 인기 있는 장소들로 선정하였기 때문이에요!"
+        elif "안녕" in user_message or "반가워" in user_message:
+            response = f"안녕하세요! 저는 {CHATBOT_NAME}입니다. 대전 중구 관련하여 무엇을 도와드릴까요?"
+        elif "추천" in user_message:
+            response = "사이드바에서 카테고리와 시간을 선택하면 대전 중구 내 맞춤 추천을 받으실 수 있어요!"
+        else:
+            # API 키가 없는 경우 처리
+            if 'api_key' not in st.session_state or not st.session_state.api_key:
+                return "OpenAI API 키가 설정되지 않았습니다. 사이드바에 API 키를 입력해주세요."
+
+            # 최신 ChatCompletion API 사용
+            openai.api_key = st.session_state.api_key
+            completion = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": f"당신은 대전 중구 지역경제 활성화 서비스 챗봇 {CHATBOT_NAME}입니다. 어떠한 질문을 받아도 대전 중구와 관련된 정보만 제공하세요. 대전 중구와 무관한 질문에 대해서는 대전 중구 관련 질문을 부탁하는 메시지를 보내세요."},
+                    {"role": "user", "content": user_message}
+                ],
+                max_tokens=2000,
+                temperature=0.7
+            )
+            response = completion['choices'][0]['message']['content'].strip()
 
         return response
     except Exception as e:
@@ -229,6 +240,27 @@ def handle_user_message():
         response = handle_user_question(user_message)
         st.session_state.chat_history.append(("Bot", response))
         st.session_state["user_message"] = ""
+
+# -------------------------------
+# 추가 검색 함수
+# -------------------------------
+def search_place_info(place_name):
+    info_text = f"{place_name}에 대해 더 자세히 알려줘. (대전 중구 관련)"
+    # API 키가 없는 경우 처리
+    if 'api_key' not in st.session_state or not st.session_state.api_key:
+        return "OpenAI API 키가 설정되지 않았습니다. 사이드바에 API 키를 입력해주세요."
+    openai.api_key = st.session_state.api_key
+    completion = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "당신은 대전 중구 지역경제 활성화 서비스 챗봇입니다. 질문에 반드시 대전 중구와 관련된 정보만 제공하세요."},
+            {"role": "user", "content": info_text}
+        ],
+        max_tokens=2000,
+        temperature=0.7
+    )
+    response = completion['choices'][0]['message']['content'].strip()
+    return response
 
 # -------------------------------
 # 채팅 영역
@@ -248,8 +280,11 @@ with chat_container:
             )
 
 # -------------------------------
-# 사이드바: 추천 필터 UI
+# 사이드바: API Key 입력 및 추천 필터 UI
 # -------------------------------
+st.sidebar.header("환경 설정")
+st.session_state.api_key = st.sidebar.text_input("OpenAI API 키를 입력하세요:", type="password")
+
 st.sidebar.header("추천 필터")
 all_categories = combined_data['카테고리'].dropna().unique().tolist()
 category = st.sidebar.selectbox("카테고리", ["선택하세요"] + all_categories, key="category")
@@ -271,6 +306,24 @@ if st.sidebar.button("추천받기"):
             )
     else:
         st.markdown("조건에 맞는 장소가 없습니다.")
+
+# -------------------------------
+# 추천 결과 중 추가 검색 기능
+# -------------------------------
+if st.session_state.recommendations:
+    selected_place = st.selectbox(
+        "추가 정보를 알고 싶은 장소를 선택하세요:",
+        ["선택하세요"] + [r['이름'] for r in st.session_state.recommendations],
+        key="selected_place_for_search"
+    )
+
+    if selected_place != "선택하세요":
+        if st.button("추가로 검색하기"):
+            with st.spinner("정보를 가져오는 중입니다..."):
+                details = search_place_info(selected_place)
+
+            st.session_state.chat_history.append(("User", f"{selected_place}에 대해 더 알려줘 (대전 중구 관련)"))
+            st.session_state.chat_history.append(("Bot", details))
 
 # -------------------------------
 # 채팅 입력 UI
