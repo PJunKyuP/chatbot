@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import random
 import openai
+import os
 
 # -------------------------------
 # 설정: OpenAI API Key
@@ -42,6 +43,7 @@ st.markdown(
         margin-bottom: 30px;
         text-align: center;
         padding-top: 30px;
+        position: relative;
     }
     .title-container h1 {
         margin-bottom: 10px;
@@ -53,6 +55,15 @@ st.markdown(
         font-size: 1.1em;
         color: #555;
     }
+    /* 제작자 이름 스타일 */
+    .creator {
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        font-size: 0.9em;
+        color: #555;
+    }
+
     .chat-container {
         margin-top: 20px; 
         display: flex; 
@@ -96,7 +107,6 @@ st.markdown(
     .recommendation b {
         color: #333;
     }
-    /* 사이드바 스타일 */
     [data-testid="stSidebar"] {
         background: #f7f7f7;
     }
@@ -122,6 +132,7 @@ st.markdown(
     <div class="title-container">
         <h1>성실당 챗봇 서비스</h1>
         <p>여기는 여러분을 도와줄 <strong>{CHATBOT_NAME}</strong>의 공간입니다!</p>
+        <div class="creator">제작: 박준규</div>
     </div>
     """,
     unsafe_allow_html=True
@@ -192,11 +203,11 @@ def recommend_places(category, time_limit):
         st.error(f"추천 중 오류 발생: {e}")
         return None
 
+import openai
+
 # -------------------------------
 # 사용자 메시지 처리
 # -------------------------------
-import openai
-
 def handle_user_question(user_message):
     try:
         if ("대전" not in user_message) and ("중구" not in user_message):
@@ -313,3 +324,4 @@ if st.session_state.recommendations:
 # 채팅 입력 UI
 # -------------------------------
 st.text_input("메시지를 입력하세요:", key="user_message", on_change=handle_user_message)
+
