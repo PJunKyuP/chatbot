@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 # .env 파일 로드 (API Key 숨김)
 # -------------------------------
 load_dotenv()  # .env 파일의 환경변수 로드
-openai.api_key = os.getenv("OPENAI_API_KEY")  # .env에 OPENAI_API_KEY가 있어야 함.
+openai.api_key = st.secrets["OPENAI_API_KEY"]  # .env에 OPENAI_API_KEY가 있어야 함.
 
 # -------------------------------
 # 챗봇 이름 및 브랜딩
