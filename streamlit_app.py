@@ -2,14 +2,13 @@ import streamlit as st
 import pandas as pd
 import random
 import openai
-import os
-from dotenv import load_dotenv
 
 # -------------------------------
-# .env 파일 로드 (API Key 숨김)
+# st.secrets를 사용하여 API 키 로드
 # -------------------------------
-load_dotenv()  # .env 파일의 환경변수 로드
-openai.api_key = st.secrets["OPENAI_API_KEY"]  # .env에 OPENAI_API_KEY가 있어야 함.
+# Streamlit Cloud에서 Manage app → Secrets에서 OPENAI_API_KEY 설정
+# 로컬 테스트 시 .streamlit/secrets.toml 파일에 OPENAI_API_KEY 키를 둘 수 있음
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # -------------------------------
 # 챗봇 이름 및 브랜딩
