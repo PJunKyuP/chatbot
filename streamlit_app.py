@@ -8,6 +8,13 @@ import openai
 # -------------------------------
 # Streamlit Cloud에서 Manage app → Secrets에서 OPENAI_API_KEY 설정
 # 로컬 테스트 시 .streamlit/secrets.toml 파일에 OPENAI_API_KEY 키를 둘 수 있음
+import os
+import streamlit as st
+
+# OpenAI API 키 설정
+st.secrets["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+
+# Streamlit secrets를 이용하여 API 키 불러오기
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # -------------------------------
