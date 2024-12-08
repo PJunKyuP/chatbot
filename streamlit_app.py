@@ -8,8 +8,6 @@ import openai
 # -------------------------------
 # Streamlit Cloud에서 Manage app → Secrets에서 OPENAI_API_KEY 설정
 # 로컬 테스트 시 .streamlit/secrets.toml 파일에 OPENAI_API_KEY 키를 둘 수 있음
-
-# Streamlit secrets를 이용하여 API 키 불러오기
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # -------------------------------
@@ -61,12 +59,12 @@ st.markdown(
         margin-top: 20px;
         display: flex;
         flex-direction: column;
-        gap: 30px; /* 메시지 사이 간격 늘림 */
+        gap: 30px; /* 메시지 사이 간격 */
     }
     .user-message, .bot-message {
         display: flex;
         align-items: center;
-        margin-bottom: 10px; /* 각 메시지 하단에도 추가 여백 */
+        margin-bottom: 10px; /* 각 메시지 하단 여백 */
     }
     .user-message {
         justify-content: flex-end;
@@ -214,7 +212,7 @@ def handle_user_question(user_message):
             completion = openai.ChatCompletion.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": f"당신은 대전 중구 지역경제 활성화 서비스 챗봇 {CHATBOT_NAME}입니다. 어떠한 질문을 받아도 대전 중구와 관련된 정보만 제공하세요. 대전 중구와 무관한 질문에 대해서는 대전 중구 관련 질문을 부탁하는 메시지를 보내세요."},
+                    {"role": "system", "content": f"당신은 대전 중구 지역경제 활성화 서비스 챗봇 {CHATBOT_NAME}입니다. 어떠한 질문을 받아도 대전 중구와 관련된 정보만 제공하세요."},
                     {"role": "user", "content": user_message}
                 ],
                 max_tokens=2000,
@@ -233,23 +231,6 @@ def handle_user_message():
         response = handle_user_question(user_message)
         st.session_state.chat_history.append(("Bot", response))
         st.session_state["user_message"] = ""
-
-# -------------------------------
-# 추가 검색 함수
-# -------------------------------
-def search_place_info(place_name):
-    info_text = f"{place_name}에 대해 더 자세히 알려줘. (대전 중구 관련)"
-    completion = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "당신은 대전 중구 지역경제 활성화 서비스 챗봇입니다. 질문에 반드시 대전 중구와 관련된 정보만 제공하세요."},
-            {"role": "user", "content": info_text}
-        ],
-        max_tokens=2000,
-        temperature=0.7
-    )
-    response = completion['choices'][0]['message']['content'].strip()
-    return response
 
 # -------------------------------
 # 채팅 영역
@@ -306,10 +287,9 @@ if st.session_state.recommendations:
     if selected_place != "선택하세요":
         if st.button("추가로 검색하기"):
             with st.spinner("정보를 가져오는 중입니다..."):
-                details = search_place_info(selected_place)
-
-            st.session_state.chat_history.append(("User", f"{selected_place}에 대해 더 알려줘 (대전 중구 관련)"))
-            st.session_state.chat_history.append(("Bot", details))
+                details = handle_user_question(f"{selected_place}에 대해 더 알려줘")
+                st.session_state.chat_history.append(("User", f"{selected_place}에 대해 더 알려줘"))
+                st.session_state.chat_history.append(("Bot", details))
 
 # -------------------------------
 # 채팅 입력 UI
