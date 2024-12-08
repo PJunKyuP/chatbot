@@ -1,14 +1,28 @@
 import streamlit as st
 import pandas as pd
-import random
 import openai
 
 # -------------------------------
-# st.secrets를 사용하여 API 키 로드
+# Streamlit 기본 설정
 # -------------------------------
-# Streamlit Cloud에서 Manage app → Secrets에서 OPENAI_API_KEY 설정
-# 로컬 테스트 시 .streamlit/secrets.toml 파일에 OPENAI_API_KEY 키를 둘 수 있음
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+st.set_page_config(
+    layout="wide",
+    page_title="성실당 챗봇",
+    page_icon="🍞"
+)
+
+# -------------------------------
+# OpenAI API 키 설정
+# -------------------------------
+st.sidebar.header("API 설정")
+api_key_input = st.sidebar.text_input(
+    "OpenAI API Key 입력", 
+    type="password", 
+    key="api_key_input"
+)
+
+if api_key_input:
+    openai.api_key = api_key_input
 
 # -------------------------------
 # 챗봇 이름 및 브랜딩
@@ -22,16 +36,7 @@ WELCOME_MESSAGE = (
 )
 
 # -------------------------------
-# Streamlit 기본 설정
-# -------------------------------
-st.set_page_config(
-    layout="wide",
-    page_title="성실당 챗봇",
-    page_icon="🍞"
-)
-
-# -------------------------------
-# CSS 스타일 적용
+# CSS 스타일 적용 (메시지 간격 조정)
 # -------------------------------
 st.markdown(
     """
@@ -59,12 +64,12 @@ st.markdown(
         margin-top: 20px;
         display: flex;
         flex-direction: column;
-        gap: 30px; /* 메시지 사이 간격 */
+        gap: 30px; /* 메시지 사이 간격 늘림 */
     }
     .user-message, .bot-message {
         display: flex;
         align-items: center;
-        margin-bottom: 10px; /* 각 메시지 하단 여백 */
+        margin-bottom: 10px; /* 각 메시지 하단에도 여백 */
     }
     .user-message {
         justify-content: flex-end;
@@ -158,7 +163,7 @@ def load_data():
         [
             tourism_data[['카테고리', '이름', '주소', '거리(km)', '이동시간_분_차', '이동시간_분_보행']],
             small_business_data[['카테고리', '이름', '주소', '거리(km)', '이동시간_분_차', '이동시간_분_보행']]
-        ],
+        ], 
         ignore_index=True
     )
     return combined_data
@@ -182,7 +187,7 @@ def recommend_places(category, time_limit):
     try:
         distance_limit = {"10분": 1, "20분": 2, "30분": 3, "1시간 이내": 5}[time_limit]
         filtered_data = combined_data[
-            (combined_data['카테고리'] == category) &
+            (combined_data['카테고리'] == category) & 
             (combined_data['거리(km)'] <= distance_limit)
         ]
         if not filtered_data.empty:
@@ -202,23 +207,16 @@ def handle_user_question(user_message):
         if ("대전" not in user_message) and ("중구" not in user_message):
             return "이 서비스는 대전 중구 관련 정보만 제공합니다. 대전 중구와 관련된 질문을 해주세요."
 
-        if "추천 이유" in user_message:
-            response = "추천 이유는 대전 중구 내 가까운 거리와 인기 있는 장소들로 선정하였기 때문이에요!"
-        elif "안녕" in user_message or "반가워" in user_message:
-            response = f"안녕하세요! 저는 {CHATBOT_NAME}입니다. 대전 중구 관련하여 무엇을 도와드릴까요?"
-        elif "추천" in user_message:
-            response = "사이드바에서 카테고리와 시간을 선택하면 대전 중구 내 맞춤 추천을 받으실 수 있어요!"
-        else:
-            completion = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": f"당신은 대전 중구 지역경제 활성화 서비스 챗봇 {CHATBOT_NAME}입니다. 어떠한 질문을 받아도 대전 중구와 관련된 정보만 제공하세요."},
-                    {"role": "user", "content": user_message}
-                ],
-                max_tokens=2000,
-                temperature=0.7
-            )
-            response = completion['choices'][0]['message']['content'].strip()
+        completion = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": f"당신은 대전 중구 지역경제 활성화 서비스 챗봇 {CHATBOT_NAME}입니다."},
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=2000,
+            temperature=0.7
+        )
+        response = completion['choices'][0]['message']['content'].strip()
 
         return response
     except Exception as e:
@@ -240,12 +238,12 @@ with chat_container:
     for speaker, message in st.session_state.chat_history:
         if speaker == "User":
             st.markdown(
-                f"<div class='user-message'><div class='message-bubble user-bubble'>{message}</div></div>",
+                f"<div class='user-message'><div class='message-bubble user-bubble'>{message}</div></div>", 
                 unsafe_allow_html=True
             )
         else:
             st.markdown(
-                f"<div class='bot-message'><div class='message-bubble bot-bubble'>{message}</div></div>",
+                f"<div class='bot-message'><div class='message-bubble bot-bubble'>{message}</div></div>", 
                 unsafe_allow_html=True
             )
 
@@ -273,23 +271,6 @@ if st.sidebar.button("추천받기"):
             )
     else:
         st.markdown("조건에 맞는 장소가 없습니다.")
-
-# -------------------------------
-# 추천 결과 중 추가 검색 기능
-# -------------------------------
-if st.session_state.recommendations:
-    selected_place = st.selectbox(
-        "추가 정보를 알고 싶은 장소를 선택하세요:",
-        ["선택하세요"] + [r['이름'] for r in st.session_state.recommendations],
-        key="selected_place_for_search"
-    )
-
-    if selected_place != "선택하세요":
-        if st.button("추가로 검색하기"):
-            with st.spinner("정보를 가져오는 중입니다..."):
-                details = handle_user_question(f"{selected_place}에 대해 더 알려줘")
-                st.session_state.chat_history.append(("User", f"{selected_place}에 대해 더 알려줘"))
-                st.session_state.chat_history.append(("Bot", details))
 
 # -------------------------------
 # 채팅 입력 UI
